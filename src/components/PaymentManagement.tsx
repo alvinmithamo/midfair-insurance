@@ -609,7 +609,7 @@ const PaymentManagement = () => {
                   </div>
                 </CardContent>
               </Card>
-            )))}
+            ))}
           </div>
         </TabsContent>
 

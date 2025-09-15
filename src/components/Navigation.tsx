@@ -182,7 +182,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
       </div>
 
       {/* Main Content Spacer for Desktop */}
-      <div className="hidden lg:block w-0 flex-shrink-0" />
+      <div className="hidden lg:block w-1 flex-shrink-0" />
     </>
   );
 };

@@ -184,7 +184,7 @@ const ReportsAnalytics = () => {
     }
   };
 
-  const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+  const COLORS = ['#669bbc', '#003049', '#4A90A4', '#336B87', '#2E5266', '#1A3A47'];
 
   if (loading || !analyticsData) {
     return (

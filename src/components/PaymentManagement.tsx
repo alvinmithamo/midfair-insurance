@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Filter, CreditCard, CheckCircle, Clock, X, Smartphone, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Filter, CreditCard, CheckCircle, Clock, X, Smartphone, MoreHorizontal, Edit2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -48,6 +48,8 @@ const PaymentManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const { toast } = useToast();
 
   // Form state for new payment
@@ -192,6 +194,78 @@ const PaymentManagement = () => {
       toast({
         title: "Error",
         description: "Failed to record payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    setEditingPayment(payment);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editingPayment) return;
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          client_id: editingPayment.client_id,
+          policy_id: editingPayment.policy_id,
+          amount: editingPayment.amount,
+          payment_method: editingPayment.payment_method,
+          payment_reference: editingPayment.payment_reference,
+          mpesa_transaction_id: editingPayment.mpesa_transaction_id,
+          payment_date: editingPayment.payment_date,
+          due_date: editingPayment.due_date,
+          status: editingPayment.status,
+          payment_type: editingPayment.payment_type,
+          description: editingPayment.description,
+          receipt_number: editingPayment.receipt_number,
+        })
+        .eq('id', editingPayment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Payment updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingPayment(null);
+      fetchPayments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Are you sure you want to delete this payment?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Payment deleted successfully",
+      });
+
+      fetchPayments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete payment",
         variant: "destructive",
       });
     }
@@ -464,6 +538,133 @@ const PaymentManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Payment Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Payment</DialogTitle>
+              <DialogDescription>
+                Update the payment details.
+              </DialogDescription>
+            </DialogHeader>
+            {editingPayment && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client">Client</Label>
+                  <Select value={editingPayment.client_id} onValueChange={(value) => setEditingPayment({...editingPayment, client_id: value, policy_id: ""})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.first_name} {client.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-policy">Policy</Label>
+                  <Select value={editingPayment.policy_id} onValueChange={(value) => setEditingPayment({...editingPayment, policy_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select policy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {policies.filter(p => p.client_id === editingPayment.client_id).map((policy) => (
+                        <SelectItem key={policy.id} value={policy.id}>
+                          {policy.policy_number}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-amount">Amount (KES)</Label>
+                  <Input
+                    id="edit-amount"
+                    type="number"
+                    value={editingPayment.amount}
+                    onChange={(e) => setEditingPayment({...editingPayment, amount: parseFloat(e.target.value)})}
+                    placeholder="50000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-payment_method">Payment Method</Label>
+                  <Select value={editingPayment.payment_method} onValueChange={(value) => setEditingPayment({...editingPayment, payment_method: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mpesa">M-Pesa</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-payment_date">Payment Date</Label>
+                  <Input
+                    id="edit-payment_date"
+                    type="date"
+                    value={editingPayment.payment_date}
+                    onChange={(e) => setEditingPayment({...editingPayment, payment_date: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editingPayment.status} onValueChange={(value) => setEditingPayment({...editingPayment, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-payment_reference">Payment Reference</Label>
+                  <Input
+                    id="edit-payment_reference"
+                    value={editingPayment.payment_reference || ''}
+                    onChange={(e) => setEditingPayment({...editingPayment, payment_reference: e.target.value})}
+                    placeholder="REF123456"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-receipt_number">Receipt Number</Label>
+                  <Input
+                    id="edit-receipt_number"
+                    value={editingPayment.receipt_number || ''}
+                    onChange={(e) => setEditingPayment({...editingPayment, receipt_number: e.target.value})}
+                    placeholder="RCP20240001"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editingPayment.description || ''}
+                    onChange={(e) => setEditingPayment({...editingPayment, description: e.target.value})}
+                    placeholder="Payment description..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdatePayment}>Update Payment</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -602,8 +803,11 @@ const PaymentManagement = () => {
                           </Button>
                         </>
                       )}
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleEditPayment(payment)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeletePayment(payment.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

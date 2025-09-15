@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Filter, FileText, Calendar, AlertTriangle, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Filter, FileText, Calendar, AlertTriangle, MoreHorizontal, Edit2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isAfter, isBefore, addDays } from "date-fns";
@@ -46,6 +46,8 @@ const PolicyManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const { toast } = useToast();
 
   // Form state for new policy
@@ -166,6 +168,78 @@ const PolicyManagement = () => {
       toast({
         title: "Error",
         description: "Failed to create policy",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPolicy = (policy: Policy) => {
+    setEditingPolicy(policy);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdatePolicy = async () => {
+    if (!editingPolicy) return;
+
+    try {
+      const { error } = await supabase
+        .from('policies')
+        .update({
+          client_id: editingPolicy.client_id,
+          vehicle_id: editingPolicy.vehicle_id,
+          policy_type: editingPolicy.policy_type,
+          start_date: editingPolicy.start_date,
+          end_date: editingPolicy.end_date,
+          premium_amount: editingPolicy.premium_amount,
+          excess_amount: editingPolicy.excess_amount,
+          sum_insured: editingPolicy.sum_insured,
+          status: editingPolicy.status,
+          renewal_date: editingPolicy.renewal_date,
+          agent_commission: editingPolicy.agent_commission,
+          notes: editingPolicy.notes,
+        })
+        .eq('id', editingPolicy.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Policy updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingPolicy(null);
+      fetchPolicies();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update policy",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePolicy = async (policyId: string) => {
+    if (!confirm('Are you sure you want to delete this policy?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('policies')
+        .delete()
+        .eq('id', policyId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Policy deleted successfully",
+      });
+
+      fetchPolicies();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete policy",
         variant: "destructive",
       });
     }
@@ -395,6 +469,131 @@ const PolicyManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Policy Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Policy</DialogTitle>
+              <DialogDescription>
+                Update the policy details.
+              </DialogDescription>
+            </DialogHeader>
+            {editingPolicy && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client">Client</Label>
+                  <Select value={editingPolicy.client_id} onValueChange={(value) => setEditingPolicy({...editingPolicy, client_id: value, vehicle_id: ""})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.first_name} {client.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-vehicle">Vehicle</Label>
+                  <Select value={editingPolicy.vehicle_id} onValueChange={(value) => setEditingPolicy({...editingPolicy, vehicle_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehicles.filter(v => v.client_id === editingPolicy.client_id).map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id}>
+                          {vehicle.make} {vehicle.model} - {vehicle.registration_number}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-policy_type">Policy Type</Label>
+                  <Select value={editingPolicy.policy_type} onValueChange={(value) => setEditingPolicy({...editingPolicy, policy_type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="comprehensive">Comprehensive</SelectItem>
+                      <SelectItem value="third_party">Third Party</SelectItem>
+                      <SelectItem value="third_party_fire_theft">Third Party Fire & Theft</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-start_date">Start Date</Label>
+                  <Input
+                    id="edit-start_date"
+                    type="date"
+                    value={editingPolicy.start_date}
+                    onChange={(e) => setEditingPolicy({...editingPolicy, start_date: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-end_date">End Date</Label>
+                  <Input
+                    id="edit-end_date"
+                    type="date"
+                    value={editingPolicy.end_date}
+                    onChange={(e) => setEditingPolicy({...editingPolicy, end_date: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-premium_amount">Premium Amount (KES)</Label>
+                  <Input
+                    id="edit-premium_amount"
+                    type="number"
+                    value={editingPolicy.premium_amount}
+                    onChange={(e) => setEditingPolicy({...editingPolicy, premium_amount: parseFloat(e.target.value)})}
+                    placeholder="50000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sum_insured">Sum Insured (KES)</Label>
+                  <Input
+                    id="edit-sum_insured"
+                    type="number"
+                    value={editingPolicy.sum_insured}
+                    onChange={(e) => setEditingPolicy({...editingPolicy, sum_insured: parseFloat(e.target.value)})}
+                    placeholder="1500000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editingPolicy.status} onValueChange={(value) => setEditingPolicy({...editingPolicy, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={editingPolicy.notes || ''}
+                    onChange={(e) => setEditingPolicy({...editingPolicy, notes: e.target.value})}
+                    placeholder="Additional policy notes..."
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdatePolicy}>Update Policy</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -504,8 +703,11 @@ const PolicyManagement = () => {
                         <Calendar className="h-4 w-4 mr-2" />
                         Renew
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleEditPolicy(policy)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeletePolicy(policy.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

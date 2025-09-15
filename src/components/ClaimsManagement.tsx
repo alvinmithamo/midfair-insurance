@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Filter, AlertCircle, CheckCircle, Clock, X, FileText, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Filter, AlertCircle, CheckCircle, Clock, X, FileText, MoreHorizontal, Edit2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
@@ -53,6 +53,8 @@ const ClaimsManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingClaim, setEditingClaim] = useState<Claim | null>(null);
   const { toast } = useToast();
 
   // Form state for new claim
@@ -187,6 +189,80 @@ const ClaimsManagement = () => {
       toast({
         title: "Error",
         description: "Failed to file claim",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditClaim = (claim: Claim) => {
+    setEditingClaim(claim);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateClaim = async () => {
+    if (!editingClaim) return;
+
+    try {
+      const { error } = await supabase
+        .from('claims')
+        .update({
+          policy_id: editingClaim.policy_id,
+          claim_type: editingClaim.claim_type,
+          description: editingClaim.description,
+          location_of_incident: editingClaim.location_of_incident,
+          police_report_number: editingClaim.police_report_number,
+          status: editingClaim.status,
+          claim_amount: editingClaim.claim_amount,
+          settled_amount: editingClaim.settled_amount,
+          settlement_date: editingClaim.settlement_date,
+          assessor_name: editingClaim.assessor_name,
+          assessor_contact: editingClaim.assessor_contact,
+          garage_name: editingClaim.garage_name,
+          garage_contact: editingClaim.garage_contact,
+          notes: editingClaim.notes,
+        })
+        .eq('id', editingClaim.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Claim updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingClaim(null);
+      fetchClaims();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update claim",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteClaim = async (claimId: string) => {
+    if (!confirm('Are you sure you want to delete this claim?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('claims')
+        .delete()
+        .eq('id', claimId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Claim deleted successfully",
+      });
+
+      fetchClaims();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete claim",
         variant: "destructive",
       });
     }
@@ -457,6 +533,122 @@ const ClaimsManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Claim Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Claim</DialogTitle>
+              <DialogDescription>
+                Update the claim details.
+              </DialogDescription>
+            </DialogHeader>
+            {editingClaim && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-policy">Policy</Label>
+                  <Select value={editingClaim.policy_id} onValueChange={(value) => setEditingClaim({...editingClaim, policy_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select policy" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {policies.map((policy) => (
+                        <SelectItem key={policy.id} value={policy.id}>
+                          {policy.policy_number} - {policy.clients.first_name} {policy.clients.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-claim_type">Claim Type</Label>
+                  <Select value={editingClaim.claim_type} onValueChange={(value) => setEditingClaim({...editingClaim, claim_type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="accident">Accident</SelectItem>
+                      <SelectItem value="theft">Theft</SelectItem>
+                      <SelectItem value="fire">Fire</SelectItem>
+                      <SelectItem value="vandalism">Vandalism</SelectItem>
+                      <SelectItem value="natural_disaster">Natural Disaster</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-incident_date">Incident Date</Label>
+                  <Input
+                    id="edit-incident_date"
+                    type="date"
+                    value={editingClaim.incident_date}
+                    onChange={(e) => setEditingClaim({...editingClaim, incident_date: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-claim_amount">Claim Amount (KES)</Label>
+                  <Input
+                    id="edit-claim_amount"
+                    type="number"
+                    value={editingClaim.claim_amount || 0}
+                    onChange={(e) => setEditingClaim({...editingClaim, claim_amount: parseFloat(e.target.value)})}
+                    placeholder="100000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Location of Incident</Label>
+                  <Input
+                    id="edit-location"
+                    value={editingClaim.location_of_incident || ''}
+                    onChange={(e) => setEditingClaim({...editingClaim, location_of_incident: e.target.value})}
+                    placeholder="Location where incident occurred"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editingClaim.status} onValueChange={(value) => setEditingClaim({...editingClaim, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="investigating">Investigating</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="settled">Settled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editingClaim.description}
+                    onChange={(e) => setEditingClaim({...editingClaim, description: e.target.value})}
+                    placeholder="Describe what happened..."
+                    rows={3}
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={editingClaim.notes || ''}
+                    onChange={(e) => setEditingClaim({...editingClaim, notes: e.target.value})}
+                    placeholder="Any additional information..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateClaim}>Update Claim</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -593,8 +785,11 @@ const ClaimsManagement = () => {
                           Settle
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleEditClaim(claim)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteClaim(claim.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -693,8 +888,11 @@ const ClaimsManagement = () => {
                           Settle
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleEditClaim(claim)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteClaim(claim.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>

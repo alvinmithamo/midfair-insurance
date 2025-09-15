@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Filter, Car, Settings, FileText, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Filter, Car, Settings, FileText, MoreHorizontal, Edit2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +42,8 @@ const VehicleManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const { toast } = useToast();
 
   // Form state for new vehicle
@@ -146,6 +148,81 @@ const VehicleManagement = () => {
       toast({
         title: "Error",
         description: "Failed to add vehicle",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateVehicle = async () => {
+    if (!editingVehicle) return;
+
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({
+          client_id: editingVehicle.client_id,
+          make: editingVehicle.make,
+          model: editingVehicle.model,
+          year: editingVehicle.year,
+          registration_number: editingVehicle.registration_number,
+          chassis_number: editingVehicle.chassis_number,
+          engine_number: editingVehicle.engine_number,
+          vehicle_value: editingVehicle.vehicle_value,
+          color: editingVehicle.color,
+          fuel_type: editingVehicle.fuel_type,
+          transmission: editingVehicle.transmission,
+          body_type: editingVehicle.body_type,
+          seating_capacity: editingVehicle.seating_capacity,
+          engine_capacity: editingVehicle.engine_capacity,
+          status: editingVehicle.status,
+        })
+        .eq('id', editingVehicle.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Vehicle updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingVehicle(null);
+      fetchVehicles();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update vehicle",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    if (!confirm('Are you sure you want to delete this vehicle?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', vehicleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Vehicle deleted successfully",
+      });
+
+      fetchVehicles();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete vehicle",
         variant: "destructive",
       });
     }
@@ -351,6 +428,138 @@ const VehicleManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Vehicle Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Vehicle</DialogTitle>
+              <DialogDescription>
+                Update the vehicle details.
+              </DialogDescription>
+            </DialogHeader>
+            {editingVehicle && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client">Client</Label>
+                  <Select value={editingVehicle.client_id} onValueChange={(value) => setEditingVehicle({...editingVehicle, client_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.first_name} {client.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-registration">Registration Number</Label>
+                  <Input
+                    id="edit-registration"
+                    value={editingVehicle.registration_number}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, registration_number: e.target.value})}
+                    placeholder="KXX 123A"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-make">Make</Label>
+                  <Input
+                    id="edit-make"
+                    value={editingVehicle.make}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, make: e.target.value})}
+                    placeholder="Toyota"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-model">Model</Label>
+                  <Input
+                    id="edit-model"
+                    value={editingVehicle.model}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, model: e.target.value})}
+                    placeholder="Camry"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-year">Year</Label>
+                  <Input
+                    id="edit-year"
+                    type="number"
+                    value={editingVehicle.year}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, year: parseInt(e.target.value)})}
+                    min="1950"
+                    max={new Date().getFullYear() + 1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-value">Vehicle Value (KES)</Label>
+                  <Input
+                    id="edit-value"
+                    type="number"
+                    value={editingVehicle.vehicle_value}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, vehicle_value: parseFloat(e.target.value)})}
+                    placeholder="1500000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-color">Color</Label>
+                  <Input
+                    id="edit-color"
+                    value={editingVehicle.color || ''}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, color: e.target.value})}
+                    placeholder="White"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-fuel_type">Fuel Type</Label>
+                  <Select value={editingVehicle.fuel_type || 'petrol'} onValueChange={(value) => setEditingVehicle({...editingVehicle, fuel_type: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="petrol">Petrol</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                      <SelectItem value="electric">Electric</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={editingVehicle.status} onValueChange={(value) => setEditingVehicle({...editingVehicle, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="written_off">Written Off</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-seating">Seating Capacity</Label>
+                  <Input
+                    id="edit-seating"
+                    type="number"
+                    value={editingVehicle.seating_capacity || 5}
+                    onChange={(e) => setEditingVehicle({...editingVehicle, seating_capacity: parseInt(e.target.value)})}
+                    min="1"
+                    max="50"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateVehicle}>Update Vehicle</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -441,9 +650,14 @@ const VehicleManagement = () => {
                       <FileText className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditVehicle(vehicle)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteVehicle(vehicle.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -494,9 +708,14 @@ const VehicleManagement = () => {
                       <FileText className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditVehicle(vehicle)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteVehicle(vehicle.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

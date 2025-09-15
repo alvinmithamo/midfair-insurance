@@ -409,7 +409,7 @@ const VehicleManagement = () => {
                       <CardTitle className="text-lg">{vehicle.make} {vehicle.model}</CardTitle>
                       <CardDescription>{vehicle.year} • {vehicle.registration_number}</CardDescription>
                     </div>
-                    <Badge variant={vehicle.status === 'active' ? 'success' : vehicle.status === 'inactive' ? 'secondary' : 'destructive'}>
+                    <Badge variant={vehicle.status === 'active' ? 'default' : vehicle.status === 'inactive' ? 'secondary' : 'destructive'}>
                       {vehicle.status.replace('_', ' ')}
                     </Badge>
                   </div>
@@ -462,7 +462,7 @@ const VehicleManagement = () => {
                       <CardTitle className="text-lg">{vehicle.make} {vehicle.model}</CardTitle>
                       <CardDescription>{vehicle.year} • {vehicle.registration_number}</CardDescription>
                     </div>
-                    <Badge variant={vehicle.status === 'active' ? 'success' : vehicle.status === 'inactive' ? 'secondary' : 'destructive'}>
+                    <Badge variant={vehicle.status === 'active' ? 'default' : vehicle.status === 'inactive' ? 'secondary' : 'destructive'}>
                       {vehicle.status.replace('_', ' ')}
                     </Badge>
                   </div>

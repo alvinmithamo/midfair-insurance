@@ -179,9 +179,6 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
           </Button>
         </div>
       </div>
-
-      {/* Main Content Spacer for Desktop */}
-      <div className="hidden lg:block w-64 flex-shrink-0" />
     </>
   );
 };

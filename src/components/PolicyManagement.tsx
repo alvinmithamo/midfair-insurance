@@ -454,7 +454,7 @@ const PolicyManagement = () => {
                       <CardDescription className="capitalize">{policy.policy_type.replace('_', ' ')}</CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Badge variant={policy.status === 'active' ? 'success' : policy.status === 'expired' ? 'destructive' : 'secondary'}>
+                      <Badge variant={policy.status === 'active' ? 'default' : policy.status === 'expired' ? 'destructive' : 'secondary'}>
                         {policy.status}
                       </Badge>
                       {getExpiringPolicies().includes(policy) && (

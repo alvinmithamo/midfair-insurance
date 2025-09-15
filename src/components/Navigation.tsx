@@ -116,6 +116,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
             <div>
               <h2 className="font-bold text-white">InsuranceMax</h2>
               <p className="text-xs text-white/80">Kenya Insurance Agency</p>
+              <br></br>
             </div>
           </div>
         </div>
@@ -181,7 +182,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
       </div>
 
       {/* Main Content Spacer for Desktop */}
-      <div className="hidden lg:block w-64 flex-shrink-0" />
+      <div className="hidden lg:block w-0 flex-shrink-0" />
     </>
   );
 };

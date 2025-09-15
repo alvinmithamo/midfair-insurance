@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +16,15 @@ import {
   LogOut,
   User
 } from "lucide-react";
+import {supabase} from "@/integrations/supabase/client"
+
+
+interface NavigationCounts {
+  clients: number;
+  vehicles: number;
+  policies: number;
+  claims: number;
+}
 
 interface NavigationProps {
   currentView: string;
@@ -24,6 +33,36 @@ interface NavigationProps {
 
 const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [counts, setCounts] = useState<NavigationCounts>({
+    clients: 0,
+    vehicles: 0,
+    policies: 0,
+    claims: 0
+  });
+
+  useEffect(() => {
+    fetchCounts();
+  }, []);
+
+  const fetchCounts = async () => {
+    try {
+      const [clientsRes, vehiclesRes, policiesRes, claimsRes] = await Promise.all([
+        supabase.from('clients').select('id', { count: 'exact' }),
+        supabase.from('vehicles').select('id', { count: 'exact' }),
+        supabase.from('policies').select('id', { count: 'exact' }),
+        supabase.from('claims').select('id', { count: 'exact' })
+      ]);
+
+      setCounts({
+        clients: clientsRes.count || 0,
+        vehicles: vehiclesRes.count || 0,
+        policies: policiesRes.count || 0,
+        claims: claimsRes.count || 0
+      });
+    } catch (error) {
+      console.error('Error fetching counts:', error);
+    }
+  };
 
   const navigationItems = [
     {
@@ -36,25 +75,25 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
       id: 'clients',
       label: 'Clients',
       icon: Users,
-      badge: '1,523'
+      badge: counts.clients.toLocaleString()
     },
     {
       id: 'vehicles',
       label: 'Vehicles',
       icon: Car,
-      badge: '3,245'
+      badge: counts.vehicles.toLocaleString()
     },
     {
       id: 'policies',
       label: 'Policies',
       icon: FileText,
-      badge: '2,847'
+      badge: counts.policies.toLocaleString()
     },
     {
       id: 'claims',
       label: 'Claims',
       icon: AlertTriangle,
-      badge: '47'
+      badge: counts.claims.toLocaleString()
     },
     {
       id: 'payments',
@@ -115,7 +154,7 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
             </div>
             <div>
               <h2 className="font-bold text-white">InsuranceMax</h2>
-              <p className="text-xs text-white/80">Kenya Insurance Agency</p>
+              <p className="text-xs text-white/80">Insurance Agency Management System</p>
               <br></br>
             </div>
           </div>
@@ -128,8 +167,8 @@ const Navigation = ({ currentView, onViewChange }: NavigationProps) => {
               <User className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
-              <div className="font-medium text-sm">James Kiprotich</div>
-              <div className="text-xs text-muted-foreground">Senior Agent</div>
+              <div className="font-medium text-sm">Alvin Mithamo</div>
+              <div className="text-xs text-muted-foreground">Insurance Agent</div>
             </div>
             <Button size="sm" variant="ghost">
               <Bell className="h-4 w-4" />

@@ -15,7 +15,7 @@ const Index = () => {
   const renderView = () => {
     switch (currentView) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard onViewChange={setCurrentView}/>;
       case "clients":
         return <ClientManagement />;
       case "vehicles":
